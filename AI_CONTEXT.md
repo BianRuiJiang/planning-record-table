@@ -18,8 +18,12 @@
 - 已在 Supabase SQL Editor 执行 `supabase/planning.sql`；三张 `planning_*` 表均存在且 RLS 为 true。
 - 已完成独立 React + Vite 应用：登录、05:00 周期、天气/心态、任务、对称计划/实际、自动保存、反思、导入去重。
 - 已通过 6 项 Vitest、`npm run typecheck` 和 `npm run build`；未登录 REST 校验读取/写入均被拒绝。
+- 已部署 GitHub Pages：`https://bianruijiang.github.io/planning-record-table/`。
+- 已修复：快速连续修改多个日字段时合并提交；非法日期变更被拦截；渲染异常有错误边界。
+- 已实测：任务增改删/完成、对称行增删、耗时自动/手动/跨天、刷新持久化、换日隔离、时间追踪导入和重复点击去重。
+- 2026-11-18 已导入 14 条实际记录；重复导入仍为 14 条。测试任务/记录和非法日期行已清理。
 
 ## 待确认
 - 本地 `.env.local` 需要 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_PUBLISHABLE_KEY`，不提交仓库。
-- 待用同一登录账号在浏览器完成真实读写与导入自测。
-- 待部署 GitHub Pages；GitHub CLI token 当前无效。
+- GitHub Actions 已配置两个 VITE Supabase Secret；值未入库。
+- GitHub Pages 到 Supabase 偶发一次 `Failed to fetch`，重试后成功；这是公网直连的已知风险。
