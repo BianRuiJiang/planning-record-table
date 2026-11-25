@@ -41,16 +41,8 @@ export default function EntrySection({
     return (
       <div className={`entry-controls${row?.source === 'imported' ? ' imported' : ''}`}>
         <input
-          value={values.title}
-          placeholder="事情"
-          onFocus={() => onFocusSide(kind, index)}
-          onChange={(event) => {
-            const id = row?.id ?? onFocusSide(kind, index)
-            onChange(id, { title: event.target.value })
-          }}
-        />
-        <input
           type="time"
+          className="time-input"
           value={values.start_time ?? ''}
           aria-label={`${kind === 'plan' ? '计划' : '实际'}开始时间`}
           onFocus={() => onFocusSide(kind, index)}
@@ -61,6 +53,7 @@ export default function EntrySection({
         />
         <input
           type="time"
+          className="time-input"
           value={values.end_time ?? ''}
           aria-label={`${kind === 'plan' ? '计划' : '实际'}结束时间`}
           onFocus={() => onFocusSide(kind, index)}
@@ -69,17 +62,30 @@ export default function EntrySection({
             onChange(id, { end_time: event.target.value })
           }}
         />
+        <span className="duration-cell">
+          <input
+            type="number"
+            min={0}
+            placeholder="--"
+            value={values.duration_min ?? ''}
+            aria-label={`${kind === 'plan' ? '计划' : '实际'}耗时分钟`}
+            onFocus={() => onFocusSide(kind, index)}
+            onChange={(event) => {
+              const raw = event.target.value
+              const id = row?.id ?? onFocusSide(kind, index)
+              onChange(id, { duration_min: raw === '' ? null : Math.max(0, Number(raw)) })
+            }}
+          />
+          <span aria-hidden="true">分</span>
+        </span>
         <input
-          type="number"
-          min={0}
-          placeholder="耗时"
-          value={values.duration_min ?? ''}
-          aria-label={`${kind === 'plan' ? '计划' : '实际'}耗时分钟`}
+          className="entry-title"
+          value={values.title}
+          placeholder="事情"
           onFocus={() => onFocusSide(kind, index)}
           onChange={(event) => {
-            const raw = event.target.value
             const id = row?.id ?? onFocusSide(kind, index)
-            onChange(id, { duration_min: raw === '' ? null : Math.max(0, Number(raw)) })
+            onChange(id, { title: event.target.value })
           }}
         />
         <button
@@ -96,16 +102,16 @@ export default function EntrySection({
   }
 
   return (
-    <section className="card module-card" aria-labelledby="entries-title">
+    <section className="planner-section entry-section" aria-labelledby="entries-title">
       <div className="module-head">
         <h2 id="entries-title">规划记录</h2>
         <button className="primary-button" type="button" onClick={onAddRow}>新增一行</button>
       </div>
       <div className="entry-grid-head">
-        <span>计划</span>
+        <span>计划完成</span>
         <span aria-hidden="true" />
         <span>
-          实际
+          实际完成
           <button className="ghost-button import-button" type="button" disabled={importing} onClick={onImport}>
             {importing ? '导入中...' : '从时间追踪导入'}
           </button>

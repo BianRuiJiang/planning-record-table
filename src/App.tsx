@@ -462,7 +462,8 @@ export default function App() {
           <button type="button" onClick={() => setActionError(null)}>关闭</button>
         </div>
       )}
-      <section className="card module-card" aria-labelledby="day-title">
+      <div className="planner-sheet card">
+      <section className="planner-section planner-header" aria-labelledby="day-title">
         <div className="module-head">
           <div>
             <h1 id="day-title">周期 {selectedDay}</h1>
@@ -511,7 +512,7 @@ export default function App() {
         <datalist id="mood-options">{moodOptions.map((item) => <option key={item} value={item} />)}</datalist>
       </section>
 
-      <section className="card module-card" aria-labelledby="tasks-title">
+      <section className="planner-section" aria-labelledby="tasks-title">
         <div className="module-head">
           <h2 id="tasks-title">今日任务</h2>
         </div>
@@ -520,6 +521,7 @@ export default function App() {
             title="主线任务"
             lane="main"
             tasks={mainTasks}
+            startIndex={0}
             onUpdate={patchTask}
             onDelete={(id) => void removeTask(id)}
             onAdd={() => addTask('main')}
@@ -528,6 +530,7 @@ export default function App() {
             title="弹性任务"
             lane="flex"
             tasks={flexTasks}
+            startIndex={mainTasks.length}
             onUpdate={patchTask}
             onDelete={(id) => void removeTask(id)}
             onAdd={() => addTask('flex')}
@@ -548,7 +551,7 @@ export default function App() {
         onDelete={(kind, id, index) => void removeEntry(kind, id, index)}
       />
 
-      <section className="card module-card" aria-labelledby="reflection-title">
+      <section className="planner-section reflection-section" aria-labelledby="reflection-title">
         <div className="module-head">
           <h2 id="reflection-title">反思</h2>
         </div>
@@ -558,6 +561,7 @@ export default function App() {
           onChange={(event) => changeDay({ reflection: event.target.value })}
         />
       </section>
+      </div>
     </main>
   )
 }

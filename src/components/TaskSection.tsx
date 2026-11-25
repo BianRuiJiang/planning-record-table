@@ -4,12 +4,13 @@ interface Props {
   title: string
   lane: Lane
   tasks: PlanningTask[]
+  startIndex: number
   onUpdate: (id: string, patch: Partial<Pick<PlanningTask, 'title' | 'done'>>) => void
   onDelete: (id: string) => void
   onAdd: () => void
 }
 
-export default function TaskSection({ title, lane, tasks, onUpdate, onDelete, onAdd }: Props) {
+export default function TaskSection({ title, lane, tasks, startIndex, onUpdate, onDelete, onAdd }: Props) {
   return (
     <section className="lane-panel" aria-label={title}>
       <div className="column-head">
@@ -17,14 +18,18 @@ export default function TaskSection({ title, lane, tasks, onUpdate, onDelete, on
         <button className="ghost-button" type="button" onClick={onAdd}>新增</button>
       </div>
       <div className="task-list">
-        {tasks.map((task) => (
+        {tasks.map((task, index) => (
           <div key={task.id} className={`task-row${task.done ? ' done' : ''}`}>
-            <input
-              type="checkbox"
-              checked={task.done}
-              aria-label={`完成 ${task.title || '新任务'}`}
-              onChange={(event) => onUpdate(task.id, { done: event.target.checked })}
-            />
+            <label className="task-state">
+              <input
+                className="task-check"
+                type="checkbox"
+                checked={task.done}
+                aria-label={`完成 ${task.title || '新任务'}`}
+                onChange={(event) => onUpdate(task.id, { done: event.target.checked })}
+              />
+              <span className="task-number">{startIndex + index + 1}</span>
+            </label>
             <input
               value={task.title}
               placeholder="任务名称"
