@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import DatePicker from './components/DatePicker'
 import AuthForm from './components/AuthForm'
 import EntrySection from './components/EntrySection'
 import TaskSection from './components/TaskSection'
@@ -30,12 +29,13 @@ import type {
   PlanningDay,
   PlanningEntry,
   PlanningTask,
+  SaveStatus,
   Session,
 } from './lib/types'
 
-const weatherOptions = ['晴', '多云', '阴', '雨', '雪', '雾', '风']
-const moodOptions = ['平静', '专注', '高效', '疲惫', '焦虑', '开心', '低落']
-const weekdayOptions = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
+const weatherOptions = ['晴', '多云', '阴', '雨', '雪', '大风', '雾霾']
+const moodOptions = ['平静', '专注', '高效', '疲惫', '焦虑', '低落', '开心', '紧张']
+const dayPattern = /^\d{4}-\d{2}-\d{2}$/
 
 type TaskPatch = Partial<Pick<PlanningTask, 'title' | 'done'>>
 type EntryPatch = Partial<Pick<PlanningEntry, 'title' | 'start_time' | 'end_time' | 'duration_min'>>
@@ -62,6 +62,7 @@ export default function App() {
   const [entries, setEntries] = useState<PlanningEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [actionError, setActionError] = useState<string | null>(null)
 
   const requestRef = useRef(0)
@@ -125,9 +126,11 @@ export default function App() {
       setTasks(taskRows)
       setEntries(entryRows)
       manualDurationRef.current.clear()
+      setSaveStatus('idle')
     } catch (error) {
       if (request === requestRef.current) {
         setActionError(message(error, '读取规划数据失败'))
+        setSaveStatus('error')
       }
     } finally {
       if (request === requestRef.current) setLoading(false)
@@ -142,17 +145,22 @@ export default function App() {
       setTasks([])
       setEntries([])
       setLoading(false)
+      setSaveStatus('idle')
     }
   }, [loadDay, session])
 
   function beginSave() {
     pendingSaveRef.current += 1
+    setSaveStatus('saving')
   }
 
   function finishSave(error?: unknown, fallback = '保存失败') {
     pendingSaveRef.current = Math.max(0, pendingSaveRef.current - 1)
     if (error) {
       setActionError(message(error, fallback))
+      setSaveStatus('error')
+    } else if (pendingSaveRef.current === 0) {
+      setSaveStatus('saved')
     }
   }
 
@@ -208,13 +216,11 @@ export default function App() {
     persistTask(id)
   }
 
-  function ensureTask(lane: 'main' | 'flex', index: number) {
-    const laneTasks = tasksRef.current.filter((item) => item.lane === lane)
-    const existing = laneTasks[index]
-    if (existing) return existing.id
-    if (!day || !session) return ''
+  function addTask(lane: 'main' | 'flex') {
+    if (!day || !session) return
+    // 首屏固定左右各 3 个；已有超量数据时只允许删除，不允许继续新增。
+    if (tasksRef.current.filter((item) => item.lane === lane).length >= 3) return
     const id = String(localIdRef.current--)
-    const nextSort = Math.max(-1, ...laneTasks.map((item) => item.sort_order)) + 1
     const row: PlanningTask = {
       id,
       user_id: session.user.id,
@@ -222,10 +228,9 @@ export default function App() {
       lane,
       title: '',
       done: false,
-      sort_order: nextSort,
+      sort_order: tasksRef.current.length,
     }
     setTasks((prev) => [...prev, row])
-    return id
   }
 
   async function removeTask(id: string) {
@@ -387,8 +392,10 @@ export default function App() {
         imported.forEach((item) => manualDurationRef.current.add(item.id))
         setEntries((prev) => [...prev, ...imported])
       }
+      setSaveStatus('saved')
     } catch (error) {
       setActionError(message(error, '导入时间追踪记录失败'))
+      setSaveStatus('error')
     } finally {
       setImporting(false)
     }
@@ -421,6 +428,8 @@ export default function App() {
   if (!session) return <AuthForm />
   if (loading && !day) return <main className="shell"><div className="card status-card">正在加载规划数据...</div></main>
 
+  const statusText = saveStatus === 'saving' ? '保存中' : saveStatus === 'saved' ? '已保存' : saveStatus === 'error' ? '保存失败' : '自动保存'
+
   return (
     <main className="shell">
       {actionError && (
@@ -430,34 +439,53 @@ export default function App() {
         </div>
       )}
       <div className="planner-sheet card">
-      <section className="planner-section planner-header">
-        <div className="header-controls">
-          <DatePicker value={selectedDay} onChange={setSelectedDay} />
-          <select
-            aria-label="星期"
-            value={weekdayLabel(selectedDay)}
-            disabled
-          >
-            {weekdayOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select
-            aria-label="天气"
-            value={day?.weather ?? ''}
-            onChange={(event) => changeDay({ weather: event.target.value })}
-          >
-            <option value="" hidden />
-            {weatherOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select
-            aria-label="心态"
-            value={day?.mood ?? ''}
-            onChange={(event) => changeDay({ mood: event.target.value })}
-          >
-            <option value="" hidden />
-            {moodOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <button className="ghost-button sign-out" type="button" onClick={() => void supabase.auth.signOut()}>退出</button>
+      <section className="planner-section planner-header" aria-labelledby="day-title">
+        <div className="module-head">
+          <div>
+            <h1 id="day-title">周期 {selectedDay}</h1>
+            <p className="section-hint">{weekdayLabel(selectedDay)} · 05:00 至次日 05:00</p>
+          </div>
+          <div className="top-actions">
+            <span className={`save-status ${saveStatus}`}>{statusText}</span>
+            <button className="ghost-button" type="button" onClick={() => void supabase.auth.signOut()}>退出</button>
+          </div>
         </div>
+        <div className="day-fields">
+          <label>
+            <span>日期</span>
+            <input
+              type="date"
+              value={selectedDay}
+              onChange={(event) => {
+                if (dayPattern.test(event.target.value)) setSelectedDay(event.target.value)
+              }}
+            />
+          </label>
+          <label>
+            <span>星期</span>
+            <input value={weekdayLabel(selectedDay)} readOnly />
+          </label>
+          <label>
+            <span>天气</span>
+            <input
+              list="weather-options"
+              value={day?.weather ?? ''}
+              placeholder="晴 / 雨 / 自定义"
+              onChange={(event) => changeDay({ weather: event.target.value })}
+            />
+          </label>
+          <label>
+            <span>心态</span>
+            <input
+              list="mood-options"
+              value={day?.mood ?? ''}
+              placeholder="平静 / 专注 / 自定义"
+              onChange={(event) => changeDay({ mood: event.target.value })}
+            />
+          </label>
+        </div>
+        <datalist id="weather-options">{weatherOptions.map((item) => <option key={item} value={item} />)}</datalist>
+        <datalist id="mood-options">{moodOptions.map((item) => <option key={item} value={item} />)}</datalist>
       </section>
 
       <section className="planner-section tasks-section" aria-labelledby="tasks-title">
@@ -469,17 +497,19 @@ export default function App() {
             title="主线任务"
             lane="main"
             tasks={mainTasks}
+            startIndex={0}
             onUpdate={patchTask}
             onDelete={(id) => void removeTask(id)}
-            onEnsure={(index) => ensureTask('main', index)}
+            onAdd={() => addTask('main')}
           />
           <TaskSection
             title="弹性任务"
             lane="flex"
             tasks={flexTasks}
+            startIndex={mainTasks.length}
             onUpdate={patchTask}
             onDelete={(id) => void removeTask(id)}
-            onEnsure={(index) => ensureTask('flex', index)}
+            onAdd={() => addTask('flex')}
           />
         </div>
       </section>
@@ -498,10 +528,7 @@ export default function App() {
 
       <section className="planner-section reflection-section" aria-labelledby="reflection-title">
         <div className="module-head">
-          <h2 id="reflection-title">
-            反思
-            <span>（今天做了什么、没做什么、有什么收获、如何改进等等）</span>
-          </h2>
+          <h2 id="reflection-title">反思</h2>
         </div>
         <textarea
           value={day?.reflection ?? ''}
