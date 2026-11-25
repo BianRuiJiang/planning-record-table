@@ -35,6 +35,7 @@ import type {
 
 const weatherOptions = ['晴', '多云', '阴', '雨', '雪', '大风', '雾霾']
 const moodOptions = ['平静', '专注', '高效', '疲惫', '焦虑', '低落', '开心', '紧张']
+const dayPattern = /^\d{4}-\d{2}-\d{2}$/
 
 type TaskPatch = Partial<Pick<PlanningTask, 'title' | 'done'>>
 type EntryPatch = Partial<Pick<PlanningEntry, 'title' | 'start_time' | 'end_time' | 'duration_min'>>
@@ -479,7 +480,7 @@ export default function App() {
               type="date"
               value={selectedDay}
               onChange={(event) => {
-                if (event.target.value) setSelectedDay(event.target.value)
+                if (dayPattern.test(event.target.value)) setSelectedDay(event.target.value)
               }}
             />
           </label>
