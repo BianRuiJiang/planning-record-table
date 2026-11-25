@@ -1,0 +1,25 @@
+# 规划记录表 - 项目记忆
+
+## 项目目标
+- 独立的 React + Vite + TypeScript + Supabase 规划记录应用。
+- 复用「个人时间追踪」的 Supabase 项目、登录用户和 `activities` 数据；不改动该项目源码。
+
+## 核心规则
+- 日周期为北京时间 05:00 到次日 05:00，05:00 前归属前一天；页面标题显示周期起始日。
+- 只新增规划表，禁止修改或删除已有表；前端对 `activities` 只做 SELECT。
+- 计划与实际两侧结构完全对称；新增一行必须同时新增两侧。
+- 时间追踪记录是单个时间点时只能导入为开始时间，不得用相邻记录间隔推算耗时。
+- 导入用 `source_activity_id` 去重。
+- 输入停止 800ms 后自动保存，保存状态必须可见，失败必须提示。
+- 配色使用冷静自然色板：绿色=完成/进行中，蓝色=时间，红色仅删除/错误。
+
+## 进度
+- 已完成阶段0：已核对时间追踪项目的技术栈、登录、表结构和 05:00 规则。
+- 已在 Supabase SQL Editor 执行 `supabase/planning.sql`；三张 `planning_*` 表均存在且 RLS 为 true。
+- 已完成独立 React + Vite 应用：登录、05:00 周期、天气/心态、任务、对称计划/实际、自动保存、反思、导入去重。
+- 已通过 6 项 Vitest、`npm run typecheck` 和 `npm run build`；未登录 REST 校验读取/写入均被拒绝。
+
+## 待确认
+- 本地 `.env.local` 需要 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_PUBLISHABLE_KEY`，不提交仓库。
+- 待用同一登录账号在浏览器完成真实读写与导入自测。
+- 待部署 GitHub Pages；GitHub CLI token 当前无效。
