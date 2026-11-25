@@ -7,7 +7,6 @@ interface Props {
   planTotal: number | null
   actualTotal: number | null
   importing: boolean
-  onAddRow: () => void
   onImport: () => void
   onFocusSide: (kind: 'plan' | 'actual', index: number) => string
   onChange: (
@@ -23,13 +22,13 @@ export default function EntrySection({
   planTotal,
   actualTotal,
   importing,
-  onAddRow,
   onImport,
   onFocusSide,
   onChange,
   onDelete,
 }: Props) {
-  const rowCount = Math.max(planRows.length, actualRows.length)
+  // 首屏固定 3 对；导入超过 3 条时在模块内滚动。
+  const rowCount = Math.max(3, planRows.length, actualRows.length)
 
   function sideRows(kind: 'plan' | 'actual') {
     return kind === 'plan' ? planRows : actualRows
@@ -105,7 +104,6 @@ export default function EntrySection({
     <section className="planner-section entry-section" aria-labelledby="entries-title">
       <div className="module-head">
         <h2 id="entries-title">规划记录</h2>
-        <button className="primary-button" type="button" onClick={onAddRow}>新增一行</button>
       </div>
       <div className="entry-grid-head">
         <span>计划完成</span>
@@ -125,7 +123,6 @@ export default function EntrySection({
             {controls('actual', index)}
           </div>
         ))}
-        {rowCount === 0 && <p className="empty-text">还没有规划行</p>}
       </div>
       <div className="totals">
         <span>计划合计：<strong className="time-text">{durationLabel(planTotal)}</strong></span>

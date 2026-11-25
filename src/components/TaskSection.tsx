@@ -15,7 +15,14 @@ export default function TaskSection({ title, lane, tasks, startIndex, onUpdate, 
     <section className="lane-panel" aria-label={title}>
       <div className="column-head">
         <h3>{title}</h3>
-        <button className="ghost-button" type="button" onClick={onAdd}>新增</button>
+        <button
+          className="ghost-button"
+          type="button"
+          disabled={tasks.length >= 3}
+          onClick={onAdd}
+        >
+          新增
+        </button>
       </div>
       <div className="task-list">
         {tasks.map((task, index) => (

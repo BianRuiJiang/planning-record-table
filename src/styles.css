@@ -16,11 +16,16 @@
   --ease: cubic-bezier(.2, .8, .2, 1);
   --line-strong: rgba(48, 54, 48, .68);
   --line-soft: rgba(48, 54, 48, .14);
+  --task-row-height: 37px;
+  --planning-row-height: 50px;
 }
 
 * { box-sizing: border-box; }
 
-html { min-width: 0; }
+html {
+  min-width: 0;
+  height: 100%;
+}
 
 body {
   margin: 0;
@@ -29,9 +34,14 @@ body {
   font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
+  height: 100%;
+  overflow: hidden;
 }
 
-#root { min-height: 100vh; }
+#root {
+  height: 100%;
+  min-height: 0;
+}
 
 .app-loading {
   min-height: 100vh;
@@ -42,12 +52,14 @@ body {
 
 .shell {
   width: min(1240px, 100%);
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   margin: 0 auto;
-  padding: 20px 20px 40px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  overflow: hidden;
 }
 
 .card {
@@ -62,25 +74,39 @@ body {
 .planner-sheet {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 40px);
-  padding: 24px clamp(16px, 4vw, 44px) 28px;
+  height: 100%;
+  min-height: 0;
+  padding: 20px clamp(16px, 4vw, 40px) 20px;
+  overflow: hidden;
 }
 
 .planner-section {
   min-width: 0;
-  padding: 18px 0 26px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 0 18px;
+  overflow: hidden;
 }
 
 .planner-section + .planner-section {
   border-top: 2px solid var(--line-strong);
 }
 
+.reflection-section {
+  flex: 1 1 0;
+  padding-bottom: 12px;
+}
+
 .reflection-section textarea {
-  min-height: 170px;
+  flex: 1;
+  min-height: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   padding: 0;
+  resize: none;
+  overflow-y: auto;
   line-height: 29px;
   background-image: repeating-linear-gradient(
     to bottom,
@@ -100,6 +126,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
+  flex-shrink: 0;
 }
 
 h1, h2, h3 {
@@ -348,11 +375,16 @@ input[type="checkbox"] {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .task-list {
   display: grid;
   gap: 8px;
+  max-height: calc(var(--task-row-height) * 3 + 16px);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .task-row {
@@ -361,6 +393,7 @@ input[type="checkbox"] {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  height: var(--task-row-height);
 }
 
 .task-row.done input:not([type="checkbox"]) {
@@ -383,6 +416,7 @@ input[type="checkbox"] {
   color: var(--ink-2);
   font-size: 12px;
   padding-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .entry-grid-head > span {
@@ -399,11 +433,24 @@ input[type="checkbox"] {
 .import-button { flex-shrink: 0; font-size: 12px; }
 .entry-rows { display: grid; gap: 0; }
 
+.entry-section {
+  flex: 0 0 auto;
+}
+
 .entry-row {
   position: relative;
+  height: var(--planning-row-height);
   padding: 9px 0;
   border-bottom: 1px solid var(--line-soft);
   background: transparent;
+  flex-shrink: 0;
+}
+
+.entry-rows {
+  max-height: calc(var(--planning-row-height) * 3);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .entry-row::before {
@@ -486,6 +533,7 @@ input[type="checkbox"] {
   padding-top: 12px;
   margin-top: 14px;
   color: var(--ink-2);
+  flex-shrink: 0;
 }
 
 .time-text {
@@ -547,10 +595,12 @@ input[type="checkbox"] {
 @media (max-width: 760px) {
   .shell { padding: 14px 12px 28px; }
   .planner-sheet {
-    min-height: calc(100vh - 28px);
-    padding: 18px 16px 22px;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    padding: 16px 14px 18px;
   }
-  .planner-section { padding: 16px 0 22px; }
+  .planner-section { padding: 12px 0 16px; }
   .day-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px 20px;
@@ -559,6 +609,15 @@ input[type="checkbox"] {
   .entry-row {
     grid-template-columns: minmax(0, 1fr);
   }
+  .entry-row { height: auto; min-height: 52px; }
+  .entry-section { flex: 1 1 0; }
+  .entry-rows {
+    max-height: none;
+    flex: 1;
+    min-height: 0;
+  }
+  .reflection-section { flex: 0 0 auto; }
+  .reflection-section textarea { flex: 0 0 96px; }
   .entry-row::before { display: none; }
   .row-number {
     order: 1;

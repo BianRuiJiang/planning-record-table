@@ -218,6 +218,8 @@ export default function App() {
 
   function addTask(lane: 'main' | 'flex') {
     if (!day || !session) return
+    // 首屏固定左右各 3 个；已有超量数据时只允许删除，不允许继续新增。
+    if (tasksRef.current.filter((item) => item.lane === lane).length >= 3) return
     const id = String(localIdRef.current--)
     const row: PlanningTask = {
       id,
@@ -335,32 +337,6 @@ export default function App() {
     }
     setEntries((prev) => [...prev, row])
     return id
-  }
-
-  function addEntryRow() {
-    if (!day || !session) return
-    const rowCount = Math.max(
-      entriesRef.current.filter((item) => item.kind === 'plan').length,
-      entriesRef.current.filter((item) => item.kind === 'actual').length,
-    )
-    const baseId = localIdRef.current
-    localIdRef.current -= 2
-    const base: Omit<PlanningEntry, 'id' | 'kind'> = {
-      user_id: session.user.id,
-      day_id: day.id,
-      title: '',
-      start_time: null,
-      end_time: null,
-      duration_min: null,
-      sort_order: rowCount,
-      source: 'manual',
-      source_activity_id: null,
-    }
-    setEntries((prev) => [
-      ...prev,
-      { ...base, id: String(baseId), kind: 'plan' as const },
-      { ...base, id: String(baseId - 1), kind: 'actual' as const },
-    ])
   }
 
   async function removeEntry(kind: EntryKind, id: string, index: number) {
@@ -512,7 +488,7 @@ export default function App() {
         <datalist id="mood-options">{moodOptions.map((item) => <option key={item} value={item} />)}</datalist>
       </section>
 
-      <section className="planner-section" aria-labelledby="tasks-title">
+      <section className="planner-section tasks-section" aria-labelledby="tasks-title">
         <div className="module-head">
           <h2 id="tasks-title">今日任务</h2>
         </div>
@@ -544,7 +520,6 @@ export default function App() {
         planTotal={planTotal}
         actualTotal={actualTotal}
         importing={importing}
-        onAddRow={addEntryRow}
         onImport={() => void importActual()}
         onFocusSide={ensureEntry}
         onChange={patchEntry}
