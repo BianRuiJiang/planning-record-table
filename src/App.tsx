@@ -216,11 +216,13 @@ export default function App() {
     persistTask(id)
   }
 
-  function addTask(lane: 'main' | 'flex') {
-    if (!day || !session) return
-    // 首屏固定左右各 3 个；已有超量数据时只允许删除，不允许继续新增。
-    if (tasksRef.current.filter((item) => item.lane === lane).length >= 3) return
+  function ensureTask(lane: 'main' | 'flex', index: number) {
+    const laneTasks = tasksRef.current.filter((item) => item.lane === lane)
+    const existing = laneTasks[index]
+    if (existing) return existing.id
+    if (!day || !session) return ''
     const id = String(localIdRef.current--)
+    const nextSort = Math.max(-1, ...laneTasks.map((item) => item.sort_order)) + 1
     const row: PlanningTask = {
       id,
       user_id: session.user.id,
@@ -228,9 +230,10 @@ export default function App() {
       lane,
       title: '',
       done: false,
-      sort_order: tasksRef.current.length,
+      sort_order: nextSort,
     }
     setTasks((prev) => [...prev, row])
+    return id
   }
 
   async function removeTask(id: string) {
@@ -339,6 +342,32 @@ export default function App() {
     return id
   }
 
+  function addEntryRow() {
+    if (!day || !session) return
+    const rowCount = Math.max(
+      entriesRef.current.filter((item) => item.kind === 'plan').length,
+      entriesRef.current.filter((item) => item.kind === 'actual').length,
+    )
+    const baseId = localIdRef.current
+    localIdRef.current -= 2
+    const base: Omit<PlanningEntry, 'id' | 'kind'> = {
+      user_id: session.user.id,
+      day_id: day.id,
+      title: '',
+      start_time: null,
+      end_time: null,
+      duration_min: null,
+      sort_order: rowCount,
+      source: 'manual',
+      source_activity_id: null,
+    }
+    setEntries((prev) => [
+      ...prev,
+      { ...base, id: String(baseId), kind: 'plan' as const },
+      { ...base, id: String(baseId - 1), kind: 'actual' as const },
+    ])
+  }
+
   async function removeEntry(kind: EntryKind, id: string, index: number) {
     const row = sortRows(entriesRef.current.filter((item) => item.kind === kind))[index]
     if (!row || row.id !== id) return
@@ -438,8 +467,7 @@ export default function App() {
           <button type="button" onClick={() => setActionError(null)}>关闭</button>
         </div>
       )}
-      <div className="planner-sheet card">
-      <section className="planner-section planner-header" aria-labelledby="day-title">
+      <section className="module-card" aria-labelledby="day-title">
         <div className="module-head">
           <div>
             <h1 id="day-title">周期 {selectedDay}</h1>
@@ -488,7 +516,7 @@ export default function App() {
         <datalist id="mood-options">{moodOptions.map((item) => <option key={item} value={item} />)}</datalist>
       </section>
 
-      <section className="planner-section tasks-section" aria-labelledby="tasks-title">
+      <section className="module-card" aria-labelledby="tasks-title">
         <div className="module-head">
           <h2 id="tasks-title">今日任务</h2>
         </div>
@@ -500,7 +528,7 @@ export default function App() {
             startIndex={0}
             onUpdate={patchTask}
             onDelete={(id) => void removeTask(id)}
-            onAdd={() => addTask('main')}
+            onEnsure={(index) => ensureTask('main', index)}
           />
           <TaskSection
             title="弹性任务"
@@ -509,7 +537,7 @@ export default function App() {
             startIndex={mainTasks.length}
             onUpdate={patchTask}
             onDelete={(id) => void removeTask(id)}
-            onAdd={() => addTask('flex')}
+            onEnsure={(index) => ensureTask('flex', index)}
           />
         </div>
       </section>
@@ -520,15 +548,19 @@ export default function App() {
         planTotal={planTotal}
         actualTotal={actualTotal}
         importing={importing}
+        onAddRow={addEntryRow}
         onImport={() => void importActual()}
         onFocusSide={ensureEntry}
         onChange={patchEntry}
         onDelete={(kind, id, index) => void removeEntry(kind, id, index)}
       />
 
-      <section className="planner-section reflection-section" aria-labelledby="reflection-title">
+      <section className="module-card" aria-labelledby="reflection-title">
         <div className="module-head">
-          <h2 id="reflection-title">反思</h2>
+          <h2 id="reflection-title">
+            反思
+            <span>（今天做了什么、没做什么、有什么收获、如何改进等等）</span>
+          </h2>
         </div>
         <textarea
           value={day?.reflection ?? ''}
@@ -536,7 +568,6 @@ export default function App() {
           onChange={(event) => changeDay({ reflection: event.target.value })}
         />
       </section>
-      </div>
     </main>
   )
 }

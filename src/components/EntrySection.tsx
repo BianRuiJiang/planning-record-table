@@ -7,6 +7,7 @@ interface Props {
   planTotal: number | null
   actualTotal: number | null
   importing: boolean
+  onAddRow: () => void
   onImport: () => void
   onFocusSide: (kind: 'plan' | 'actual', index: number) => string
   onChange: (
@@ -22,6 +23,7 @@ export default function EntrySection({
   planTotal,
   actualTotal,
   importing,
+  onAddRow,
   onImport,
   onFocusSide,
   onChange,
@@ -104,16 +106,17 @@ export default function EntrySection({
     <section className="planner-section entry-section" aria-labelledby="entries-title">
       <div className="module-head">
         <h2 id="entries-title">规划记录</h2>
+        <button className="primary-button" type="button" onClick={onAddRow}>新增一行</button>
       </div>
       <div className="entry-grid-head">
-        <span>计划完成</span>
+        <span className="side-label">计划完成</span>
         <span aria-hidden="true" />
-        <span>
-          实际完成
+        <div className="actual-head">
+          <span className="side-label">实际完成</span>
           <button className="ghost-button import-button" type="button" disabled={importing} onClick={onImport}>
-            {importing ? '导入中...' : '从时间追踪导入'}
+            {importing ? '导入中...' : '导入'}
           </button>
-        </span>
+        </div>
       </div>
       <div className="entry-rows">
         {Array.from({ length: rowCount }, (_, index) => (
