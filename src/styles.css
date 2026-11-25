@@ -461,7 +461,33 @@ input[readonly] { color: var(--ink-2); }
   .module-head { align-items: flex-start; flex-direction: column; }
   .top-actions { width: 100%; justify-content: space-between; }
   .day-fields { grid-template-columns: minmax(0, 1fr); }
-  .tasks-section .two-columns { grid-template-columns: minmax(0, 1fr); }
+  .tasks-section .two-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .tasks-section .lane-panel { padding: 8px; }
+  .tasks-section .task-list {
+    grid-template-rows: repeat(3, minmax(34px, auto));
+    gap: 2px;
+  }
+  .tasks-section .task-row {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 5px;
+  }
+  .tasks-section .task-state {
+    width: 20px;
+    height: 20px;
+  }
+  .tasks-section .task-number {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+  }
+  .tasks-section .task-row input:not([type="checkbox"]) {
+    height: 28px;
+    padding: 0 5px;
+    font-size: 12px;
+  }
   .entry-grid-head { grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); }
   .entry-row { grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); }
   .entry-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 5px; }

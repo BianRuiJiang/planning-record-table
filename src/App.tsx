@@ -34,7 +34,7 @@ import type {
 } from './lib/types'
 
 const weatherOptions = ['晴', '多云', '阴', '雨', '雪', '大风', '雾霾']
-const moodOptions = ['平静', '专注', '高效', '疲惫', '焦虑', '低落', '开心', '紧张']
+const moodOptions = ['平和', '专注', '高效', '疲惫', '焦虑', '开心', '低落']
 const dayPattern = /^\d{4}-\d{2}-\d{2}$/
 
 type TaskPatch = Partial<Pick<PlanningTask, 'title' | 'done'>>
@@ -507,7 +507,7 @@ export default function App() {
             <input
               list="mood-options"
               value={day?.mood ?? ''}
-              placeholder="平静 / 专注 / 自定义"
+              placeholder="平和 / 专注 / 自定义"
               onChange={(event) => changeDay({ mood: event.target.value })}
             />
           </label>
