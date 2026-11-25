@@ -4,57 +4,54 @@ interface Props {
   title: string
   lane: Lane
   tasks: PlanningTask[]
-  startIndex: number
+  onEnsure: (index: number) => string
   onUpdate: (id: string, patch: Partial<Pick<PlanningTask, 'title' | 'done'>>) => void
   onDelete: (id: string) => void
-  onAdd: () => void
 }
 
-export default function TaskSection({ title, lane, tasks, startIndex, onUpdate, onDelete, onAdd }: Props) {
+export default function TaskSection({ title, lane, tasks, onEnsure, onUpdate, onDelete }: Props) {
+  // 每侧固定 3 格；空格聚焦后自动生成本地草稿，输入标题后入库。
+  const slots = Array.from({ length: 3 }, (_, index) => tasks[index])
+
   return (
     <section className="lane-panel" aria-label={title}>
       <div className="column-head">
         <h3>{title}</h3>
-        <button
-          className="ghost-button"
-          type="button"
-          disabled={tasks.length >= 3}
-          onClick={onAdd}
-        >
-          新增
-        </button>
       </div>
       <div className="task-list">
-        {tasks.map((task, index) => (
-          <div key={task.id} className={`task-row${task.done ? ' done' : ''}`}>
+        {slots.map((task, index) => (
+          <div key={task?.id ?? `blank-${lane}-${index}`} className={`task-row${task?.done ? ' done' : ''}`}>
             <label className="task-state">
               <input
                 className="task-check"
                 type="checkbox"
-                checked={task.done}
-                aria-label={`完成 ${task.title || '新任务'}`}
-                onChange={(event) => onUpdate(task.id, { done: event.target.checked })}
+                checked={task?.done ?? false}
+                disabled={!task}
+                aria-label={`完成 ${task?.title || '任务'}`}
+                onChange={(event) => task && onUpdate(task.id, { done: event.target.checked })}
               />
-              <span className="task-number">{startIndex + index + 1}</span>
+              <span className="task-number">{(lane === 'main' ? 0 : 3) + index + 1}</span>
             </label>
             <input
-              value={task.title}
+              value={task?.title ?? ''}
               placeholder="任务名称"
-              onChange={(event) => onUpdate(task.id, { title: event.target.value })}
+              onFocus={() => onEnsure(index)}
+              onChange={(event) => {
+                const id = task?.id ?? onEnsure(index)
+                onUpdate(id, { title: event.target.value })
+              }}
             />
             <button
-              className="danger-icon"
+              className={task ? 'danger-icon' : 'danger-icon invisible'}
               type="button"
-              aria-label={`删除 ${task.title || '新任务'}`}
-              onClick={() => onDelete(task.id)}
+              tabIndex={task ? 0 : -1}
+              aria-label={`删除 ${task?.title || '任务'}`}
+              onClick={task ? () => onDelete(task.id) : undefined}
             >
               删除
             </button>
           </div>
         ))}
-        {tasks.length === 0 && (
-          <p className="empty-text">{lane === 'main' ? '还没有主线任务' : '还没有弹性任务'}</p>
-        )}
       </div>
     </section>
   )
