@@ -6,10 +6,9 @@ interface Props {
   tasks: PlanningTask[]
   onEnsure: (index: number) => string
   onUpdate: (id: string, patch: Partial<Pick<PlanningTask, 'title' | 'done'>>) => void
-  onDelete: (id: string) => void
 }
 
-export default function TaskSection({ title, lane, tasks, onEnsure, onUpdate, onDelete }: Props) {
+export default function TaskSection({ title, lane, tasks, onEnsure, onUpdate }: Props) {
   // 每侧固定 3 格；空格聚焦后自动生成本地草稿，输入标题后入库。
   const slots = Array.from({ length: 3 }, (_, index) => tasks[index])
 
@@ -34,22 +33,13 @@ export default function TaskSection({ title, lane, tasks, onEnsure, onUpdate, on
             </label>
             <input
               value={task?.title ?? ''}
-              placeholder="任务名称"
+              aria-label={`${title} ${index + 1}`}
               onFocus={() => onEnsure(index)}
               onChange={(event) => {
                 const id = task?.id ?? onEnsure(index)
                 onUpdate(id, { title: event.target.value })
               }}
             />
-            <button
-              className={task ? 'danger-icon' : 'danger-icon invisible'}
-              type="button"
-              tabIndex={task ? 0 : -1}
-              aria-label={`删除 ${task?.title || '任务'}`}
-              onClick={task ? () => onDelete(task.id) : undefined}
-            >
-              删除
-            </button>
           </div>
         ))}
       </div>

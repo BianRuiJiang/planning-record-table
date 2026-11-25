@@ -102,15 +102,15 @@ export default function EntrySection({
 
   return (
     <section className="planner-section entry-section" aria-label="规划记录">
-      <div className="entry-grid-head">
-        <span>计划完成</span>
-        <span aria-hidden="true" />
-        <span>
-          实际完成
-          <button className="ghost-button import-button" type="button" disabled={importing} onClick={onImport}>
-            {importing ? '导入中...' : '从时间追踪导入'}
-          </button>
-        </span>
+      <div className="entry-toolbar">
+        <div className="entry-grid-head">
+          <span>计划完成</span>
+          <span aria-hidden="true" />
+          <span>实际完成</span>
+        </div>
+        <button className="ghost-button import-button" type="button" disabled={importing} onClick={onImport}>
+          {importing ? '导入中...' : '从时间追踪导入'}
+        </button>
       </div>
       <div className="entry-rows">
         {Array.from({ length: rowCount }, (_, index) => (
