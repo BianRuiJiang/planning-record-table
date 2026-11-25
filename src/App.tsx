@@ -67,6 +67,7 @@ export default function App() {
   const requestRef = useRef(0)
   const localIdRef = useRef(-1)
   const dayTimerRef = useRef<number | null>(null)
+  const pendingDayPatchRef = useRef<Partial<Pick<PlanningDay, 'weather' | 'mood' | 'reflection'>>>({})
   const taskTimersRef = useRef(new Map<string, number>())
   const entryTimersRef = useRef(new Map<string, number>())
   const pendingSaveRef = useRef(0)
@@ -165,13 +166,17 @@ export default function App() {
   function changeDay(patch: Partial<Pick<PlanningDay, 'weather' | 'mood' | 'reflection'>>) {
     const current = dayRef.current
     if (!current) return
+    // 快速连续修改多个日字段时，800ms 后必须一次提交合并结果，避免只保存最后一个字段。
+    pendingDayPatchRef.current = { ...pendingDayPatchRef.current, ...patch }
     const next = { ...current, ...patch }
     setDay(next)
     if (dayTimerRef.current) window.clearTimeout(dayTimerRef.current)
     dayTimerRef.current = window.setTimeout(async () => {
+      const savedPatch = pendingDayPatchRef.current
+      pendingDayPatchRef.current = {}
       beginSave()
       try {
-        await updatePlanningDay(current.id, patch)
+        await updatePlanningDay(current.id, savedPatch)
         finishSave()
       } catch (error) {
         finishSave(error, '保存日信息失败')
