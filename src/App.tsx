@@ -5,6 +5,7 @@ import EntrySection from './components/EntrySection'
 import TaskSection from './components/TaskSection'
 import {
   deleteEntry,
+  deleteTask,
   ensurePlanningDay,
   fetchEntries,
   fetchPeriodActivities,
@@ -227,6 +228,23 @@ export default function App() {
     return id
   }
 
+  async function removeTask(id: string) {
+    const timers = taskTimersRef.current
+    if (timers.has(id)) {
+      window.clearTimeout(timers.get(id))
+      timers.delete(id)
+    }
+    setTasks((prev) => prev.filter((item) => item.id !== id))
+    if (id.startsWith('-')) return
+    beginSave()
+    try {
+      await deleteTask(id)
+      finishSave()
+    } catch (error) {
+      finishSave(error, '删除任务失败')
+    }
+  }
+
   function persistEntry(id: string) {
     const timers = entryTimersRef.current
     if (timers.has(id)) window.clearTimeout(timers.get(id))
@@ -425,19 +443,17 @@ export default function App() {
           <select
             aria-label="天气"
             value={day?.weather ?? ''}
-            className={day?.weather ? undefined : 'placeholder'}
             onChange={(event) => changeDay({ weather: event.target.value })}
           >
-            <option value="">天气</option>
+            <option value="" hidden />
             {weatherOptions.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
           <select
             aria-label="心态"
             value={day?.mood ?? ''}
-            className={day?.mood ? undefined : 'placeholder'}
             onChange={(event) => changeDay({ mood: event.target.value })}
           >
-            <option value="">心态</option>
+            <option value="" hidden />
             {moodOptions.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
           <button className="ghost-button sign-out" type="button" onClick={() => void supabase.auth.signOut()}>退出</button>
@@ -454,6 +470,7 @@ export default function App() {
             lane="main"
             tasks={mainTasks}
             onUpdate={patchTask}
+            onDelete={(id) => void removeTask(id)}
             onEnsure={(index) => ensureTask('main', index)}
           />
           <TaskSection
@@ -461,6 +478,7 @@ export default function App() {
             lane="flex"
             tasks={flexTasks}
             onUpdate={patchTask}
+            onDelete={(id) => void removeTask(id)}
             onEnsure={(index) => ensureTask('flex', index)}
           />
         </div>
