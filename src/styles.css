@@ -60,6 +60,8 @@ body {
 }
 
 .planner-sheet {
+  width: min(1360px, 100%);
+  margin: 0 auto;
   height: 100%;
   min-height: 0;
   padding: 12px clamp(12px, 3vw, 34px);

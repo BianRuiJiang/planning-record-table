@@ -101,10 +101,7 @@ export default function EntrySection({
   }
 
   return (
-    <section className="planner-section entry-section" aria-labelledby="entries-title">
-      <div className="module-head">
-        <h2 id="entries-title">规划记录</h2>
-      </div>
+    <section className="planner-section entry-section" aria-label="规划记录">
       <div className="entry-grid-head">
         <span>计划完成</span>
         <span aria-hidden="true" />
