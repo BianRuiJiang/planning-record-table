@@ -183,7 +183,7 @@ input[readonly] { color: var(--ink-2); }
 .primary-button:active { transform: scale(.97); }
 .primary-button:disabled { opacity: .5; cursor: not-allowed; }
 
-.tasks-section .two-columns {
+.task-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
@@ -461,7 +461,7 @@ input[readonly] { color: var(--ink-2); }
   .module-head { align-items: flex-start; flex-direction: column; }
   .top-actions { width: 100%; justify-content: space-between; }
   .day-fields { grid-template-columns: minmax(0, 1fr); }
-  .tasks-section .two-columns {
+  .tasks-section .task-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
   }

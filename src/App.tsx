@@ -4,7 +4,6 @@ import EntrySection from './components/EntrySection'
 import TaskSection from './components/TaskSection'
 import {
   deleteEntry,
-  deleteTask,
   ensurePlanningDay,
   fetchEntries,
   fetchPeriodActivities,
@@ -234,23 +233,6 @@ export default function App() {
     }
     setTasks((prev) => [...prev, row])
     return id
-  }
-
-  async function removeTask(id: string) {
-    const timers = taskTimersRef.current
-    if (timers.has(id)) {
-      window.clearTimeout(timers.get(id))
-      timers.delete(id)
-    }
-    setTasks((prev) => prev.filter((item) => item.id !== id))
-    if (id.startsWith('-')) return
-    beginSave()
-    try {
-      await deleteTask(id)
-      finishSave()
-    } catch (error) {
-      finishSave(error, '删除任务失败')
-    }
   }
 
   function persistEntry(id: string) {
@@ -520,14 +502,13 @@ export default function App() {
         <div className="module-head">
           <h2 id="tasks-title">今日任务</h2>
         </div>
-        <div className="two-columns">
+        <div className="task-columns">
           <TaskSection
             title="主线任务"
             lane="main"
             tasks={mainTasks}
             startIndex={0}
             onUpdate={patchTask}
-            onDelete={(id) => void removeTask(id)}
             onEnsure={(index) => ensureTask('main', index)}
           />
           <TaskSection
@@ -536,7 +517,6 @@ export default function App() {
             tasks={flexTasks}
             startIndex={mainTasks.length}
             onUpdate={patchTask}
-            onDelete={(id) => void removeTask(id)}
             onEnsure={(index) => ensureTask('flex', index)}
           />
         </div>
