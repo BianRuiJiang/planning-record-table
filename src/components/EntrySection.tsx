@@ -1,4 +1,5 @@
 import { differenceLabel, durationLabel } from '../lib/time'
+import { slotCount, slotRows } from '../lib/rows'
 import type { PlanningEntry } from '../lib/types'
 
 interface Props {
@@ -9,12 +10,12 @@ interface Props {
   importing: boolean
   onAddRow: () => void
   onImport: () => void
-  onFocusSide: (kind: 'plan' | 'actual', index: number) => string
+  onFocusSide: (kind: 'plan' | 'actual', slot: number) => string
   onChange: (
     id: string,
     patch: Partial<Pick<PlanningEntry, 'title' | 'start_time' | 'end_time' | 'duration_min'>>,
   ) => void
-  onDelete: (kind: 'plan' | 'actual', id: string, index: number) => void
+  onDelete: (kind: 'plan' | 'actual', id: string) => void
 }
 
 export default function EntrySection({
@@ -29,16 +30,20 @@ export default function EntrySection({
   onChange,
   onDelete,
 }: Props) {
-  // 首屏固定 3 对；导入超过 3 条时在模块内滚动。
-  const rowCount = Math.max(3, planRows.length, actualRows.length)
+  // 记录按 sort_order 落位：前 3 行固定预留，新增行从第 4 行开始往下接。
+  const planSlots = slotRows(planRows)
+  const actualSlots = slotRows(actualRows)
+  const rowCount = slotCount(planSlots, actualSlots)
 
   function sideRows(kind: 'plan' | 'actual') {
-    return kind === 'plan' ? planRows : actualRows
+    return kind === 'plan' ? planSlots : actualSlots
   }
 
-  function controls(kind: 'plan' | 'actual', index: number) {
-    const row = sideRows(kind)[index]
+  function controls(kind: 'plan' | 'actual', slot: number) {
+    const row = sideRows(kind)[slot]
     const values = row ?? { title: '', start_time: '', end_time: '', duration_min: null }
+    // 起止时间都填好后，耗时由时间差自动算出，不再手动输入。
+    const autoDuration = Boolean(values.start_time && values.end_time)
     return (
       <div className={`entry-controls${row?.source === 'imported' ? ' imported' : ''}`}>
         <input
@@ -46,9 +51,9 @@ export default function EntrySection({
           className="time-input"
           value={values.start_time ?? ''}
           aria-label={`${kind === 'plan' ? '计划' : '实际'}开始时间`}
-          onFocus={() => onFocusSide(kind, index)}
+          onFocus={() => onFocusSide(kind, slot)}
           onChange={(event) => {
-            const id = row?.id ?? onFocusSide(kind, index)
+            const id = row?.id ?? onFocusSide(kind, slot)
             onChange(id, { start_time: event.target.value })
           }}
         />
@@ -57,23 +62,25 @@ export default function EntrySection({
           className="time-input"
           value={values.end_time ?? ''}
           aria-label={`${kind === 'plan' ? '计划' : '实际'}结束时间`}
-          onFocus={() => onFocusSide(kind, index)}
+          onFocus={() => onFocusSide(kind, slot)}
           onChange={(event) => {
-            const id = row?.id ?? onFocusSide(kind, index)
+            const id = row?.id ?? onFocusSide(kind, slot)
             onChange(id, { end_time: event.target.value })
           }}
         />
-        <span className="duration-cell">
+        <span className={`duration-cell${autoDuration ? ' auto' : ''}`}>
           <input
             type="number"
             min={0}
             placeholder="--"
+            readOnly={autoDuration}
             value={values.duration_min ?? ''}
-            aria-label={`${kind === 'plan' ? '计划' : '实际'}耗时分钟`}
-            onFocus={() => onFocusSide(kind, index)}
+            title={autoDuration ? '由起止时间自动计算' : undefined}
+            aria-label={`${kind === 'plan' ? '计划' : '实际'}耗时分钟${autoDuration ? '，由起止时间自动计算' : ''}`}
+            onFocus={() => onFocusSide(kind, slot)}
             onChange={(event) => {
               const raw = event.target.value
-              const id = row?.id ?? onFocusSide(kind, index)
+              const id = row?.id ?? onFocusSide(kind, slot)
               onChange(id, { duration_min: raw === '' ? null : Math.max(0, Number(raw)) })
             }}
           />
@@ -83,9 +90,9 @@ export default function EntrySection({
           className="entry-title"
           value={values.title}
           placeholder="事情"
-          onFocus={() => onFocusSide(kind, index)}
+          onFocus={() => onFocusSide(kind, slot)}
           onChange={(event) => {
-            const id = row?.id ?? onFocusSide(kind, index)
+            const id = row?.id ?? onFocusSide(kind, slot)
             onChange(id, { title: event.target.value })
           }}
         />
@@ -93,8 +100,8 @@ export default function EntrySection({
           className={row ? 'danger-icon' : 'danger-icon invisible'}
           type="button"
           tabIndex={row ? 0 : -1}
-          aria-label={`删除${kind === 'plan' ? '计划' : '实际'}第 ${index + 1} 行`}
-          onClick={row ? () => onDelete(kind, row.id, index) : undefined}
+          aria-label={`删除${kind === 'plan' ? '计划' : '实际'}第 ${slot + 1} 行`}
+          onClick={row ? () => onDelete(kind, row.id) : undefined}
         >
           删除
         </button>
@@ -119,11 +126,11 @@ export default function EntrySection({
         </div>
       </div>
       <div className="entry-rows">
-        {Array.from({ length: rowCount }, (_, index) => (
-          <div className="entry-row" key={planRows[index]?.id ?? actualRows[index]?.id ?? `blank-${index}`}>
-            {controls('plan', index)}
-            <span className="row-number">{index + 1}</span>
-            {controls('actual', index)}
+        {Array.from({ length: rowCount }, (_, slot) => (
+          <div className="entry-row" key={planSlots[slot]?.id ?? actualSlots[slot]?.id ?? `blank-${slot}`}>
+            {controls('plan', slot)}
+            <span className="row-number">{slot + 1}</span>
+            {controls('actual', slot)}
           </div>
         ))}
       </div>

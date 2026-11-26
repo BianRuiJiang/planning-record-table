@@ -23,11 +23,12 @@ import {
 } from './lib/export'
 import { saveExportFiles } from './lib/export-directory'
 import { markExported } from './lib/export-marks'
+import { applyEntryPatch, withAutoDuration } from './lib/entries'
+import { nextSlot, slotRows, sortRows } from './lib/rows'
 import { supabase, configError } from './lib/supabase'
 import {
   dayRange,
   durationFromTimestamps,
-  durationMinutes,
   isoMinute,
   planningDay,
   weekdayLabel,
@@ -48,13 +49,20 @@ const dayPattern = /^\d{4}-\d{2}-\d{2}$/
 type TaskPatch = Partial<Pick<PlanningTask, 'title' | 'done'>>
 type EntryPatch = Partial<Pick<PlanningEntry, 'title' | 'start_time' | 'end_time' | 'duration_min'>>
 
-function sortRows<T extends { sort_order: number }>(rows: T[]) {
-  return [...rows].sort((left, right) => left.sort_order - right.sort_order)
-}
-
 function totalMinutes(rows: PlanningEntry[]) {
   const values = rows.map((row) => row.duration_min).filter((value): value is number => value !== null)
   return values.length ? values.reduce((sum, value) => sum + value, 0) : null
+}
+
+// 历史记录里耗时与起止时间不一致时静默回写，不打扰保存状态。
+function persistCorrections(before: PlanningEntry[], after: PlanningEntry[]) {
+  const changed = after.filter(
+    (row, index) => row.duration_min !== before[index]?.duration_min && !row.id.startsWith('-'),
+  )
+  if (changed.length === 0) return
+  void Promise.all(
+    changed.map((row) => updateEntry(row.id, { duration_min: row.duration_min }).catch(() => undefined)),
+  )
 }
 
 function message(error: unknown, fallback: string) {
@@ -83,7 +91,6 @@ export default function App() {
   const taskTimersRef = useRef(new Map<string, number>())
   const entryTimersRef = useRef(new Map<string, number>())
   const pendingSaveRef = useRef(0)
-  const manualDurationRef = useRef(new Set<string>())
   const dayRef = useRef<PlanningDay | null>(null)
   const tasksRef = useRef<PlanningTask[]>([])
   const mainTasksRef = useRef<PlanningTask[]>([])
@@ -145,8 +152,10 @@ export default function App() {
       if (request !== requestRef.current) return
       setDay(ensured)
       setTasks(taskRows)
-      setEntries(entryRows)
-      manualDurationRef.current.clear()
+      // 起止时间齐全时耗时一律由时间差决定，读入时顺手校正历史脏值。
+      const normalized = entryRows.map(withAutoDuration)
+      setEntries(normalized)
+      persistCorrections(entryRows, normalized)
       setSaveStatus('idle')
     } catch (error) {
       if (request === requestRef.current) {
@@ -272,10 +281,6 @@ export default function App() {
             ...payload,
             title: payload.title.trim(),
           })
-          if (manualDurationRef.current.has(localId)) {
-            manualDurationRef.current.delete(localId)
-            manualDurationRef.current.add(inserted.id)
-          }
           setEntries((prev) => prev.map((item) => (
             item.id === localId
               ? {
@@ -304,28 +309,14 @@ export default function App() {
   }
 
   function patchEntry(id: string, patch: EntryPatch) {
-    setEntries((prev) => prev.map((item) => {
-      if (item.id !== id) return item
-      const next = { ...item, ...patch }
-      if ('duration_min' in patch) {
-        if (patch.duration_min === null) manualDurationRef.current.delete(id)
-        else manualDurationRef.current.add(id)
-      } else if (!manualDurationRef.current.has(id)) {
-        if (next.start_time && next.end_time) {
-          next.duration_min = durationMinutes(next.start_time, next.end_time)
-        } else {
-          next.duration_min = null
-        }
-      }
-      return next
-    }))
+    setEntries((prev) => prev.map((item) => (item.id === id ? applyEntryPatch(item, patch) : item)))
     persistEntry(id)
   }
 
-  function ensureEntry(kind: EntryKind, index: number) {
-    const plan = sortRows(entriesRef.current.filter((item) => item.kind === 'plan'))
-    const actual = sortRows(entriesRef.current.filter((item) => item.kind === 'actual'))
-    const existing = kind === 'plan' ? plan[index] : actual[index]
+  function ensureEntry(kind: EntryKind, slot: number) {
+    const plan = slotRows(entriesRef.current.filter((item) => item.kind === 'plan'))
+    const actual = slotRows(entriesRef.current.filter((item) => item.kind === 'actual'))
+    const existing = kind === 'plan' ? plan[slot] : actual[slot]
     if (existing) return existing.id
     if (!day || !session) return ''
     const id = String(localIdRef.current--)
@@ -338,7 +329,7 @@ export default function App() {
       start_time: null,
       end_time: null,
       duration_min: null,
-      sort_order: index,
+      sort_order: slot,
       source: 'manual',
       source_activity_id: null,
     }
@@ -348,9 +339,10 @@ export default function App() {
 
   function addEntryRow() {
     if (!day || !session) return
-    const rowCount = Math.max(
-      entriesRef.current.filter((item) => item.kind === 'plan').length,
-      entriesRef.current.filter((item) => item.kind === 'actual').length,
+    // 前三行是首屏固定区，新增行落在它下面那一行。
+    const rowCount = nextSlot(
+      slotRows(entriesRef.current.filter((item) => item.kind === 'plan')),
+      slotRows(entriesRef.current.filter((item) => item.kind === 'actual')),
     )
     const baseId = localIdRef.current
     localIdRef.current -= 2
@@ -372,9 +364,9 @@ export default function App() {
     ])
   }
 
-  async function removeEntry(kind: EntryKind, id: string, index: number) {
-    const row = sortRows(entriesRef.current.filter((item) => item.kind === kind))[index]
-    if (!row || row.id !== id) return
+  async function removeEntry(id: string) {
+    const row = entriesRef.current.find((item) => item.id === id)
+    if (!row) return
     const timers = entryTimersRef.current
     if (timers.has(id)) {
       window.clearTimeout(timers.get(id))
@@ -422,7 +414,6 @@ export default function App() {
         sortOrder += 1
       }
       if (imported.length) {
-        imported.forEach((item) => manualDurationRef.current.add(item.id))
         setEntries((prev) => [...prev, ...imported])
       }
       setSaveStatus('saved')
@@ -601,7 +592,7 @@ export default function App() {
         onImport={() => void importActual()}
         onFocusSide={ensureEntry}
         onChange={patchEntry}
-        onDelete={(kind, id, index) => void removeEntry(kind, id, index)}
+        onDelete={(_kind, id) => void removeEntry(id)}
       />
 
       <section className="module-card reflection-section" aria-labelledby="reflection-title">

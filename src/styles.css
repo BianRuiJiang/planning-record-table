@@ -619,6 +619,26 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   text-align: right;
   color: var(--info-text);
   font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* 耗时不再需要上下微调钮，避免和「分」挤在一起 */
+.duration-cell input::-webkit-inner-spin-button,
+.duration-cell input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* 由起止时间自动算出的耗时不再画输入框，避免看起来可以手改 */
+.duration-cell.auto input,
+.duration-cell.auto input:hover,
+.duration-cell.auto input:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-2);
+  box-shadow: none;
+  cursor: default;
 }
 
 .duration-cell span:last-child {
@@ -672,21 +692,21 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 }
 
 .reflection-section textarea {
-  min-height: 104px;
+  min-height: 132px;
   resize: vertical;
-  line-height: 1.9;
+  line-height: 2.2;
   padding: 13px 15px;
   background:
-    linear-gradient(transparent calc(1.9em - 1px), rgba(47, 51, 44, .055) 0) content-box,
+    linear-gradient(transparent calc(2.2em - 1px), rgba(47, 51, 44, .055) 0) content-box,
     var(--fill);
-  background-size: 100% 1.9em;
+  background-size: 100% 2.2em;
 }
 
 .reflection-section textarea:focus-visible {
   background:
-    linear-gradient(transparent calc(1.9em - 1px), rgba(47, 51, 44, .06) 0) content-box,
+    linear-gradient(transparent calc(2.2em - 1px), rgba(47, 51, 44, .06) 0) content-box,
     #fff;
-  background-size: 100% 1.9em;
+  background-size: 100% 2.2em;
 }
 
 /* ---------- 登录 / 状态 ---------- */
@@ -1092,16 +1112,6 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   border-color: var(--accent);
   border-style: solid;
   box-shadow: 0 0 0 3px rgba(92, 125, 99, .1);
-}
-
-.calendar-day small {
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--ink-3);
-  font-size: 8px;
-  font-variant-numeric: tabular-nums;
 }
 
 .calendar-mark {

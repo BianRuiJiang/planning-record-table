@@ -308,10 +308,9 @@ export default function DatabaseOverlay({ userId, onClose, onError, onToast }: P
                       ].filter(Boolean).join(' ')}
                       disabled={state === 'future'}
                       onClick={() => setSelectedDay(day)}
-                      aria-label={`${day}${state === 'future' ? '，未来日期' : ''}`}
+                      aria-label={`${day}${count > 0 ? `，${count} 条记录` : ''}${state === 'future' ? '，未来日期' : ''}`}
                     >
                       <span className="calendar-number">{dayNumber(day)}</span>
-                      {count > 0 && <small>{count}</small>}
                       {state === 'exported' && <i className="calendar-mark" aria-hidden="true">✓</i>}
                     </button>
                   )
