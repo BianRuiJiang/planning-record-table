@@ -452,7 +452,10 @@ export default function App() {
       <section className="module-card" aria-labelledby="day-title">
         <div className="module-head">
           <div>
-            <h1 id="day-title">周期 {selectedDay}</h1>
+            <h1 id="day-title">
+              <span className="h1-label">周期</span>
+              {selectedDay}
+            </h1>
             <p className="section-hint">{weekdayLabel(selectedDay)} · 05:00 至次日 05:00</p>
           </div>
           <div className="top-actions">
@@ -535,7 +538,7 @@ export default function App() {
         onDelete={(kind, id, index) => void removeEntry(kind, id, index)}
       />
 
-      <section className="module-card" aria-labelledby="reflection-title">
+      <section className="module-card reflection-section" aria-labelledby="reflection-title">
         <div className="module-head">
           <h2 id="reflection-title">
             反思
