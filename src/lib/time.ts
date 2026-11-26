@@ -20,9 +20,18 @@ const weekdayFormatter = new Intl.DateTimeFormat('zh-CN', {
 })
 
 export function planningDay(date = new Date()) {
-  const dayText = dateFormatter.format(date)
+  const dayText = beijingDate(date)
   const hour = Number(minuteFormatter.format(date).slice(0, 2))
   return hour < 5 ? shiftDate(dayText, -1) : dayText
+}
+
+// 不套用 05:00 规则的自然日，用于导出时间戳和日历。
+export function beijingDate(date = new Date()) {
+  return dateFormatter.format(date)
+}
+
+export function beijingStamp(date = new Date()) {
+  return `${dateFormatter.format(date)} ${minuteFormatter.format(date)}`
 }
 
 export function shiftDate(dayText: string, days: number) {

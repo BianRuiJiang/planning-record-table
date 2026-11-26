@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AuthForm from './components/AuthForm'
+import DatabaseOverlay from './components/DatabaseOverlay'
 import EntrySection from './components/EntrySection'
 import TaskSection from './components/TaskSection'
 import {
@@ -14,6 +15,14 @@ import {
   updatePlanningDay,
   updateTask,
 } from './lib/api'
+import {
+  buildDayMarkdown,
+  downloadText,
+  markdownFileName,
+  type DayArchiveData,
+} from './lib/export'
+import { saveExportFiles } from './lib/export-directory'
+import { markExported } from './lib/export-marks'
 import { supabase, configError } from './lib/supabase'
 import {
   dayRange,
@@ -63,6 +72,9 @@ export default function App() {
   const [importing, setImporting] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [actionError, setActionError] = useState<string | null>(null)
+  const [databaseOpen, setDatabaseOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [flash, setFlash] = useState<string | null>(null)
 
   const requestRef = useRef(0)
   const localIdRef = useRef(-1)
@@ -74,6 +86,8 @@ export default function App() {
   const manualDurationRef = useRef(new Set<string>())
   const dayRef = useRef<PlanningDay | null>(null)
   const tasksRef = useRef<PlanningTask[]>([])
+  const mainTasksRef = useRef<PlanningTask[]>([])
+  const flexTasksRef = useRef<PlanningTask[]>([])
   const entriesRef = useRef<PlanningEntry[]>([])
 
   useEffect(() => {
@@ -81,10 +95,18 @@ export default function App() {
   }, [day])
   useEffect(() => {
     tasksRef.current = tasks
+    mainTasksRef.current = tasks.filter((item) => item.lane === 'main')
+    flexTasksRef.current = tasks.filter((item) => item.lane === 'flex')
   }, [tasks])
   useEffect(() => {
     entriesRef.current = entries
   }, [entries])
+
+  useEffect(() => {
+    if (!flash) return
+    const timer = window.setTimeout(() => setFlash(null), 3200)
+    return () => window.clearTimeout(timer)
+  }, [flash])
 
   useEffect(() => {
     if (configError) {
@@ -412,6 +434,40 @@ export default function App() {
     }
   }
 
+  async function exportCurrentDay() {
+    if (!day || !session || exporting) return
+    const archive: DayArchiveData = {
+      day: day.day,
+      weather: day.weather,
+      mood: day.mood,
+      reflection: day.reflection,
+      main: sortRows(mainTasksRef.current),
+      flex: sortRows(flexTasksRef.current),
+      plan: sortRows(entriesRef.current.filter((item) => item.kind === 'plan')),
+      actual: sortRows(entriesRef.current.filter((item) => item.kind === 'actual')),
+    }
+    const file = { name: markdownFileName(day.day), content: buildDayMarkdown(archive) }
+    setExporting(true)
+    try {
+      const result = await saveExportFiles([file])
+      if (result.mode === 'download') {
+        downloadText(file.content, file.name)
+        setFlash(`浏览器不支持固定目录，已下载 ${file.name}`)
+      } else {
+        setFlash(`已保存到「${result.directory}」/ ${file.name}`)
+      }
+      markExported(session.user.id, [day.day], [file.name])
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setActionError('已取消目录选择，本次未导出')
+      } else {
+        setActionError(message(error, '导出失败，请重试'))
+      }
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const planRows = useMemo(
     () => sortRows(entries.filter((item) => item.kind === 'plan')),
     [entries],
@@ -460,6 +516,16 @@ export default function App() {
           </div>
           <div className="top-actions">
             <span className={`save-status ${saveStatus}`}>{statusText}</span>
+            <span className="action-divider" aria-hidden="true" />
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => void exportCurrentDay()}
+              disabled={!day || exporting}
+            >
+              {exporting ? '导出中…' : '导出'}
+            </button>
+            <button className="ghost-button" type="button" onClick={() => setDatabaseOpen(true)}>数据库</button>
             <button className="ghost-button" type="button" onClick={() => void supabase.auth.signOut()}>退出</button>
           </div>
         </div>
@@ -551,6 +617,17 @@ export default function App() {
           onChange={(event) => changeDay({ reflection: event.target.value })}
         />
       </section>
+
+      {flash && <div className="flash-toast" role="status">{flash}</div>}
+
+      {databaseOpen && session && (
+        <DatabaseOverlay
+          userId={session.user.id}
+          onClose={() => setDatabaseOpen(false)}
+          onError={(text) => setActionError(text)}
+          onToast={(text) => setFlash(text)}
+        />
+      )}
     </main>
   )
 }

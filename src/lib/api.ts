@@ -160,3 +160,34 @@ export async function fetchPeriodActivities(startIso: Date, endIso: Date) {
   throwIfError(error, '读取时间追踪记录失败')
   return data ?? []
 }
+
+// 数据库页需要跨日期读取，RLS 已按 user_id 隔离，这里只做 SELECT。
+export async function fetchAllPlanningDays() {
+  const { data, error } = await supabase
+    .from('planning_days')
+    .select('id,user_id,day,weather,mood,reflection')
+    .order('day', { ascending: true })
+    .returns<PlanningDay[]>()
+  throwIfError(error, '读取历史规划日失败')
+  return data ?? []
+}
+
+export async function fetchAllPlanningTasks() {
+  const { data, error } = await supabase
+    .from('planning_tasks')
+    .select('id,user_id,day_id,lane,title,done,sort_order')
+    .order('sort_order')
+    .returns<PlanningTask[]>()
+  throwIfError(error, '读取历史任务失败')
+  return data ?? []
+}
+
+export async function fetchAllPlanningEntries() {
+  const { data, error } = await supabase
+    .from('planning_entries')
+    .select('id,user_id,day_id,kind,title,start_time,end_time,duration_min,sort_order,source,source_activity_id')
+    .order('sort_order')
+    .returns<PlanningEntry[]>()
+  throwIfError(error, '读取历史规划记录失败')
+  return data ?? []
+}
